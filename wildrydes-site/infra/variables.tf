@@ -6,12 +6,12 @@ variable "aws_region" {
 variable "github_token" {
   type      = string
   sensitive = true
-  default = ""
+  default = "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"
 }
 
 variable "github_repo_url" {
   type = string
-  default = "https://github.com/0klAaa/wildrydes-site-MAGA"
+  default = "https://github.com/0klAaa/wildrydes-site-MAGA/"
 }
 
 variable "github_branch" {
