@@ -10,7 +10,7 @@ resource "aws_amplify_app" "wildrydes" {
         commands:
           - echo "Hello"
     artifacts:
-      baseDirectory: wildrydes-site
+      baseDirectory: .
       files:
         - '**/*'
     cache:
