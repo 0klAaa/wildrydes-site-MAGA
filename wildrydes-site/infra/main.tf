@@ -12,15 +12,24 @@ resource "aws_amplify_app" "wildrydes" {
         commands:
           - echo "Hello"
     artifacts:
-      baseDirectory: .
+      baseDirectory: wildrydes-site
       files:
         - '**/*'
     cache:
       paths: []
 YAML
+
+custom_rule {
+    source = "/"
+    target = "/index.html"
+    status = "200"
+  }
     environment_variables = {
     ENV = "prod"
   }
+  lifecycle {
+  ignore_changes = [oauth_token]
+}
 }
 
 resource "aws_amplify_branch" "main" {
@@ -48,4 +57,34 @@ resource "aws_iam_role" "MagaIAM" {
       },
     ]
   })
+}
+
+resource "aws_cognito_user_pool" "wildrydes" {
+  name = "WildRydes"
+
+  auto_verified_attributes = ["email"]
+  username_attributes = ["email"]
+
+  password_policy {
+    minimum_length    = 8
+    require_uppercase = true
+    require_lowercase = true
+    require_numbers   = true
+    require_symbols   = true
+  }
+}
+
+resource "aws_cognito_user_pool_client" "webapp" {
+  name         = "WildRydesWebApp"
+  user_pool_id = aws_cognito_user_pool.wildrydes.id
+
+  generate_secret = false
+
+  explicit_auth_flows = [
+    "ALLOW_USER_SRP_AUTH",
+    "ALLOW_REFRESH_TOKEN_AUTH",
+    "ALLOW_USER_PASSWORD_AUTH"
+  ]
+
+  supported_identity_providers = ["COGNITO"]
 }

@@ -6,7 +6,7 @@ variable "aws_region" {
 variable "github_token" {
   type      = string
   sensitive = true
-  default = "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"
+  default = "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"
 }
 
 variable "github_repo_url" {
