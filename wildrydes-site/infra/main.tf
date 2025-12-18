@@ -1,7 +1,7 @@
 resource "aws_amplify_app" "wildrydes" {
   name       = "MAGA-wildrydes-site-Terraform"
   repository = var.github_repo_url
-  access_token = var.github_token
+  oauth_token = var.github_token
   build_spec = <<-YAML
   version: 1
   frontend:
