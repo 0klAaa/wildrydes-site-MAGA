@@ -27,3 +27,23 @@ resource "aws_amplify_branch" "main" {
 
   enable_auto_build = true
 }
+
+resource "aws_iam_role" "test_role" {
+  name = "test_role"
+
+  # Terraform's "jsonencode" function converts a
+  # Terraform expression result to valid JSON syntax.
+  assume_role_policy = jsonencode({
+    Version = "2025-18-12"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid    = ""
+        Principal = {
+          Service = ["amplify.eu-west-1.amazonaws.com","amplify.amazonaws.com"]
+        }
+      },
+    ]
+  })
+}
