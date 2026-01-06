@@ -3,18 +3,30 @@ variable "aws_region" {
   default = "eu-west-1"
 }
 
-variable "github_token" {
-  type      = string
-  sensitive = true
-  default = "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"
-}
-
-variable "github_repo_url" {
+variable "site_bucket_name" {
   type = string
-  default = "https://github.com/0klAaa/wildrydes-site-MAGA/"
+  default = "magabuckets3"
 }
 
-variable "github_branch" {
+variable "project_name" {
   type    = string
-  default = "main"
+  default = "maga-wildrydes"
 }
+
+variable "cognito_domain_prefix" {
+  type = string
+  default = "maga-wildrydes-auth-001"
+}
+
+variable "cognito_callback_url" {
+  type = string
+  default = "https://d2gw4h3g14s8co.cloudfront.net/signin.html"
+}
+
+variable "cognito_logout_url" {
+  type = string
+  default = "https://d2gw4h3g14s8co.cloudfront.net/"
+}
+
+variable "github_owner" { type = string }
+variable "github_repo"  { type = string }

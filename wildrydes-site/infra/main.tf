@@ -1,90 +1,87 @@
-resource "aws_amplify_app" "wildrydes" {
-  name       = "MAGA-wildrydes-site-Terraform"
-  repository = var.github_repo_url
-  oauth_token = var.github_token
-  iam_service_role_arn = aws_iam_role.MagaIAM.arn
-  
-  build_spec = <<-YAML
-  version: 1
-  frontend:
-    phases:
-      build:
-        commands:
-          - echo "Hello"
-    artifacts:
-      baseDirectory: wildrydes-site
-      files:
-        - '**/*'
-    cache:
-      paths: []
-YAML
+resource "aws_s3_bucket" "site" {
+  bucket = var.bucket_name
+}
 
-custom_rule {
-    source = "/"
-    target = "/index.html"
-    status = "200"
+# Bloque tout public access 
+resource "aws_s3_bucket_public_access_block" "site" {
+  bucket                  = aws_s3_bucket.site.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# cloudFront lit S3 de façon signée
+resource "aws_cloudfront_origin_access_control" "oac" {
+  name                              = "${var.project_name}-oac"
+  description                       = "OAC for private S3 origin"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+resource "aws_cloudfront_distribution" "cdn" {
+  enabled             = true
+  default_root_object = "index.html"
+
+  origin {
+    domain_name              = aws_s3_bucket.site.bucket_regional_domain_name
+    origin_id                = "s3-origin"
+    origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
   }
-    environment_variables = {
-    ENV = "prod"
+
+  default_cache_behavior {
+    target_origin_id       = "s3-origin"
+    viewer_protocol_policy = "redirect-to-https"
+
+    allowed_methods = ["GET", "HEAD", "OPTIONS"]
+    cached_methods  = ["GET", "HEAD", "OPTIONS"]
+    compress        = true
+
+    forwarded_values {
+      query_string = false
+      cookies { forward = "none" }
+    }
   }
-  lifecycle {
-  ignore_changes = [oauth_token]
-}
-}
 
-resource "aws_amplify_branch" "main" {
-  app_id      = aws_amplify_app.wildrydes.id
-  branch_name = var.github_branch
+  # redirect
+  custom_error_response {
+    error_code         = 404
+    response_code      = 200
+    response_page_path = "/index.html"
+  }
 
-  enable_auto_build = true
-}
+  restrictions {
+    geo_restriction { restriction_type = "none" }
+  }
 
-resource "aws_iam_role" "MagaIAM" {
-  name = "MagaIAM"
-  
-  # Terraform's "jsonencode" function converts a
-  # Terraform expression result to valid JSON syntax.
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Sid    = ""
-        Principal = {
-          Service = ["amplify.eu-west-1.amazonaws.com","amplify.amazonaws.com"]
-        }
-      },
-    ]
-  })
-}
-
-resource "aws_cognito_user_pool" "wildrydes" {
-  name = "WildRydes"
-
-  auto_verified_attributes = ["email"]
-  username_attributes = ["email"]
-
-  password_policy {
-    minimum_length    = 8
-    require_uppercase = true
-    require_lowercase = true
-    require_numbers   = true
-    require_symbols   = true
+  viewer_certificate {
+    cloudfront_default_certificate = true
   }
 }
 
-resource "aws_cognito_user_pool_client" "webapp" {
-  name         = "WildRydesWebApp"
-  user_pool_id = aws_cognito_user_pool.wildrydes.id
+# Bucket policy: seul CloudFront peut lire
+data "aws_iam_policy_document" "bucket_policy" {
+  statement {
+    sid       = "AllowCloudFrontReadOnly"
+    effect    = "Allow"
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.site.arn}/*"]
 
-  generate_secret = false
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
 
-  explicit_auth_flows = [
-    "ALLOW_USER_SRP_AUTH",
-    "ALLOW_REFRESH_TOKEN_AUTH",
-    "ALLOW_USER_PASSWORD_AUTH"
-  ]
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = [aws_cloudfront_distribution.cdn.arn]
+    }
+  }
+}
 
-  supported_identity_providers = ["COGNITO"]
+resource "aws_s3_bucket_policy" "site" {
+  bucket = aws_s3_bucket.site.id
+  policy = data.aws_iam_policy_document.bucket_policy.json
 }

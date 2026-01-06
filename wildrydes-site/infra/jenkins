@@ -1,0 +1,26 @@
+pipeline {
+  agent any
+
+  stages {
+    stage('Init') {
+      steps {
+        echo 'Pipeline started'
+        sh 'echo "Workspace ready"'
+      }
+    }
+
+    stage('Build') {
+      steps {
+        echo 'Build step (fake)'
+        sh 'echo "Compiling the universe !"; sleep 1; echo "Build OK"'
+      }
+    }
+
+    stage('Test') {
+      steps {
+        echo 'Running tests (fake)'
+        sh 'echo "Running unit tests..."; sleep 1; echo "All tests passed"'
+      }
+    }
+  }
+}
